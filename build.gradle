@@ -1,0 +1,148 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
+
+plugins {
+    id "com.jfrog.bintray" version "1.6"
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    testCompile 'com.google.guava:guava:19.0'
+    testCompile 'junit:junit:4.11'
+}
+
+ext{
+    projVersion = '1.a.1'
+    projName = 'NextLimiter'
+    projDesc = 'NextLimiter: A Java Queue based Request limitter Library'
+    projURL = "https://github.com/yoojia/NextLimiter"
+    projVCS = "https://github.com/yoojia/NextLimiter.git"
+}
+
+group 'com.github.yoojia'
+version projVersion
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+def pomConfig = {
+
+    name projName
+    url projURL
+    inceptionYear '2016'
+
+    scm { url projVCS }
+
+    developers {
+        developer {
+            id 'yoojia'
+            name 'Yoojia Chen'
+            email 'yoojiachen@gmail.com'
+            url 'https://yoojia.github.io'
+        }
+    }
+
+}
+
+publishing {
+    publications {
+        MavenJava(MavenPublication) {
+            from components.java
+            groupId 'com.github.yoojia'
+            artifactId 'next-limiter'
+            version projVersion
+
+            artifact sourcesJar
+            artifact javadocJar
+
+            pom.withXml {
+                asNode().children().last() + pomConfig
+                asNode().appendNode("description", projDesc)
+                def licencesNode = asNode().appendNode('licenses')
+                def licenseNode = licencesNode.appendNode('license')
+                licenseNode.appendNode('name', 'The Apache Software License, Version 2.0')
+                licenseNode.appendNode('url', 'http://www.apache.org/licenses/LICENSE-2.0.txt')
+                licenseNode.appendNode('distribution', 'repo')
+            }
+        }
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+javadoc {
+    options{
+        encoding "UTF-8"
+        charSet 'UTF-8'
+        author true
+        version true
+        links "http://docs.oracle.com/javase/7/docs/api"
+        title project.name
+    }
+}
+
+artifacts {
+    archives sourcesJar, javadocJar
+}
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('bintrayUser')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('bintrayApiKey')
+    publications = ['MavenJava']
+
+    dryRun = false
+    publish = true // 是否自动发布
+
+    pkg {
+        repo = 'maven'
+        name = projName
+        userOrg = 'yoojia'
+        licenses = ['Apache-2.0']
+        vcsUrl = projVCS
+        labels = ['Java', 'Event Bus']
+
+        publicDownloadNumbers = true
+
+        version {
+            name = projVersion
+            desc = projDesc
+            vcsTag = projVersion
+            attributes = ['gradle-plugin': 'com.use.less:com.use.less.gradle:gradle-useless-plugin']
+
+            gpg {
+                sign = true
+            }
+
+            mavenCentralSync {
+                sync = true
+                user = project.hasProperty('SONATYPE_USER') ? project.property('SONATYPE_USER') : System.getenv('SONATYPE_USER')
+                password = project.hasProperty('SONATYPE_PASS') ? project.property('SONATYPE_PASS') : System.getenv('SONATYPE_PASS')
+                close = '1'
+            }
+        }
+
+    }
+}
