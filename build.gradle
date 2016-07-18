@@ -21,14 +21,13 @@ repositories {
 }
 
 dependencies {
-    testCompile 'com.google.guava:guava:19.0'
     testCompile 'junit:junit:4.11'
 }
 
 ext{
     projVersion = '1.a.1'
     projName = 'NextLimiter'
-    projDesc = 'NextLimiter: A Java Queue based Request limitter Library'
+    projDesc = 'NextLimiter: A Java Key&DelayQueue based Request limiter Library'
     projURL = "https://github.com/yoojia/NextLimiter"
     projVCS = "https://github.com/yoojia/NextLimiter.git"
 }
