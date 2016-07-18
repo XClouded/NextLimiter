@@ -25,7 +25,7 @@ dependencies {
 }
 
 ext{
-    projVersion = '1.a.1'
+    projVersion = '1.a.0'
     projName = 'NextLimiter'
     projDesc = 'NextLimiter: A Java Key&DelayQueue based Request limiter Library'
     projURL = "https://github.com/yoojia/NextLimiter"
@@ -121,7 +121,7 @@ bintray {
         userOrg = 'yoojia'
         licenses = ['Apache-2.0']
         vcsUrl = projVCS
-        labels = ['Java', 'Event Bus']
+        labels = ['Java', 'RequestLimiter', 'RateLimiter']
 
         publicDownloadNumbers = true
 
