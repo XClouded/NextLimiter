@@ -136,7 +136,7 @@ bintray {
             }
 
             mavenCentralSync {
-                sync = true
+                sync = false
                 user = project.hasProperty('SONATYPE_USER') ? project.property('SONATYPE_USER') : System.getenv('SONATYPE_USER')
                 password = project.hasProperty('SONATYPE_PASS') ? project.property('SONATYPE_PASS') : System.getenv('SONATYPE_PASS')
                 close = '1'

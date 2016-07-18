@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class NextLimiter {
 
-    private final Set<Object> keyMap = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<Object> keyMap = Collections.newSetFromMap(new ConcurrentHashMap<Object, Boolean>());
     private final DelayQueue<DelayedObject<Object>> queue = new DelayQueue<>();
     private final Thread daemonThread;
 
