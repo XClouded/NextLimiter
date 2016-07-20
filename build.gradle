@@ -25,7 +25,7 @@ dependencies {
 }
 
 ext{
-    projVersion = '1.a.0'
+    projVersion = '1.a.1'
     projName = 'NextLimiter'
     projDesc = 'NextLimiter: A Java Key&DelayQueue based Request limiter Library'
     projURL = "https://github.com/yoojia/NextLimiter"

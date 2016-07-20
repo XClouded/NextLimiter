@@ -1,30 +1,44 @@
 package com.github.yoojia.limiter;
 
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author Yoojia Chen (yoojiachen@gmail.com)
- * @since 0.1
+ * @since 1.0
  */
 public class NextLimiter {
 
-    private final Set<Object> keyMap = Collections.newSetFromMap(new ConcurrentHashMap<Object, Boolean>());
-    private final DelayQueue<DelayedObject<Object>> queue = new DelayQueue<>();
-    private final Thread daemonThread;
+    private final ReentrantLock mLock = new ReentrantLock();
+    private final Set<Object> mKeyMap = new HashSet<>();
+    private final DelayQueue<DelayedObject<Object>> mDelayQueue = new DelayQueue<>();
+    private final Thread mDaemonThread;
+
+    private final int mDefTimeout;
 
     public NextLimiter() {
-        daemonThread = new Thread(new Runnable() {
+        this(1000);
+    }
+
+    public NextLimiter(int defTimeout) {
+        mDefTimeout = defTimeout;
+        mDaemonThread = new Thread(new Runnable() {
             @Override public void run() {
                 while (true) {
                     try{
-                        DelayedObject<Object> task = queue.take();
+                        DelayedObject<Object> task = mDelayQueue.take();
                         if(task != null) {
                             final Object key = task.getData();
-                            keyMap.remove(key);
+                            final ReentrantLock removeLock = mLock;
+                            removeLock.lock();
+                            try{
+                                mKeyMap.remove(key);
+                            }finally {
+                                removeLock.unlock();
+                            }
                         }
                     }catch (InterruptedException e) {
                         break;
@@ -32,34 +46,45 @@ public class NextLimiter {
                 }
             }
         });
-        daemonThread.setDaemon(true);
-        daemonThread.setName("NextLimiter-daemon");
-        daemonThread.start();
+        mDaemonThread.setDaemon(true);
+        mDaemonThread.setName("NextLimiter-daemon");
+        mDaemonThread.start();
     }
 
     public Thread getDaemonThread() {
-        return daemonThread;
+        return mDaemonThread;
     }
 
-    public void apply(Object key, Runnable work, int limitedMillis) {
-        finallyWork(key, work, limitedMillis);
+    public void apply(Object key, Runnable work, int timeoutMS) {
+        finallyWork(key, work, timeoutMS);
     }
 
-    public void apply(Object key, DelayedRunnable work, int limitedMillis) {
-        finallyWork(key, work, limitedMillis);
+    public void apply(Object key, Runnable work) {
+        finallyWork(key, work, mDefTimeout);
     }
 
-    private void finallyWork(Object key, Runnable work, int limitedMillis) {
+    public void apply(Object key, DelayedRunnable work, int timeoutMS) {
+        finallyWork(key, work, timeoutMS);
+    }
+
+    public void apply(Object key, DelayedRunnable work) {
+        finallyWork(key, work, mDefTimeout);
+    }
+
+    private void finallyWork(Object key, Runnable work, int timeoutMS) {
         boolean allow;
-        synchronized (keyMap) {
-            allow = !keyMap.contains(key);
+        final ReentrantLock checkAndAddLock = mLock;
+        checkAndAddLock.lock();
+        try{
+            allow = !mKeyMap.contains(key);
             if(allow) {
-                keyMap.add(key);
+                mKeyMap.add(key);
             }
+        }finally {
+            checkAndAddLock.unlock();
         }
         if(allow) {
-            long deadAfter = TimeUnit.NANOSECONDS.convert(limitedMillis, TimeUnit.MILLISECONDS);
-            queue.put(new DelayedObject<>(key, deadAfter));
+            mDelayQueue.put(new DelayedObject<>(key, TimeUnit.NANOSECONDS.convert(timeoutMS, TimeUnit.MILLISECONDS)));
             work.run();
         }else if(work instanceof DelayedRunnable) {
             ((DelayedRunnable)work).delayed();
