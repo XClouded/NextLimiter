@@ -48,6 +48,14 @@ public class NextLimiter {
         mDaemonThread.start();
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        try{
+            mDaemonThread.interrupt();
+        }catch (Exception e){ /*nop*/ }
+    }
+
     public Thread getDaemonThread() {
         return mDaemonThread;
     }
@@ -169,4 +177,18 @@ public class NextLimiter {
 
     }
 
+    public static void main(String[] args) {
+        NextLimiter limiter = new NextLimiter();
+        limiter.apply("login-request", new DelayedRunnable() {
+            @Override
+            public void onDelayed() {
+
+            }
+
+            @Override
+            public void run() {
+
+            }
+        });
+    }
 }
