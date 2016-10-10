@@ -177,18 +177,4 @@ public class NextLimiter {
 
     }
 
-    public static void main(String[] args) {
-        NextLimiter limiter = new NextLimiter();
-        limiter.apply("login-request", new DelayedRunnable() {
-            @Override
-            public void onDelayed() {
-
-            }
-
-            @Override
-            public void run() {
-
-            }
-        });
-    }
 }
