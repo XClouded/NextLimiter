@@ -10,24 +10,23 @@ public class DelayedObject<T> implements Delayed {
 
     private static final AtomicLong ID_POOL = new AtomicLong(0);
 
-    private final long id;
-    private final long deadTime;
-
-    public final T data;
+    private final long mId;
+    private final long mDeadTime;
+    private final T mData;
 
     public DelayedObject(T data, long timeout) {
-        this.id = ID_POOL.getAndIncrement();
-        this.deadTime = now() + timeout;
-        this.data = data;
+        this.mId = ID_POOL.getAndIncrement();
+        this.mDeadTime = now() + timeout;
+        this.mData = data;
     }
 
     public T getData() {
-        return this.data;
+        return this.mData;
     }
 
     @Override
     public long getDelay(TimeUnit unit) {
-        return unit.convert(deadTime - now(), TimeUnit.NANOSECONDS);
+        return unit.convert(mDeadTime - now(), TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -36,12 +35,12 @@ public class DelayedObject<T> implements Delayed {
             return 0;
         if (other instanceof DelayedObject) {
             DelayedObject x = (DelayedObject) other;
-            long diff = deadTime - x.deadTime;
+            long diff = mDeadTime - x.mDeadTime;
             if (diff < 0)
                 return -1;
             else if (diff > 0)
                 return 1;
-            else if (id < x.id)
+            else if (mId < x.mId)
                 return -1;
             else
                 return 1;

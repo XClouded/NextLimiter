@@ -9,5 +9,5 @@ public interface DelayedRunnable extends Runnable{
     /**
      * 任务尚不能被执行，需要延迟
      */
-    void delayed();
+    void onDelayed();
 }
