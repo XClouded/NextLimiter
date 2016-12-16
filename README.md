@@ -4,7 +4,7 @@
 
 # 使用
 
-> compile 'com.github.yoojia:next-limiter:1.a.2'
+> compile 'com.github.yoojia:next-limiter:1.a.3'
 
 ```java
 

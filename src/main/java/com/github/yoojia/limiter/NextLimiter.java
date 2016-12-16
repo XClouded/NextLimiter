@@ -102,7 +102,7 @@ public class NextLimiter {
     }
 
     /**
-     * 手动限制任务多次执行，直到手动调用{@see unlock(Object) }来解除限制。
+     * 手动限制任务多次执行，直到手动调用unlock来解除限制。
      * @param key 任务Key
      * @param work 具体任务
      */
@@ -111,7 +111,7 @@ public class NextLimiter {
     }
 
     /**
-     * 手动限制任务多次执行，直到手动调用{@see unlock(Object) }来解除限制。
+     * 手动限制任务多次执行，直到手动调用unlock来解除限制。
      * @param key 任务Key
      * @param work 具体任务
      */
