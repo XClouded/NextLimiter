@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class NextLimiter {
 
     private final ReentrantLock mLock = new ReentrantLock();
-    private final Set<Object> mJobKeys = new HashSet<Object>();
+    private final Set<Object> mLimitedKeys = new HashSet<Object>();
     private final DelayQueue<DelayedObject<Object>> mDelayQueue = new DelayQueue<DelayedObject<Object>>();
     private final Thread mDaemonThread;
 
@@ -29,16 +29,17 @@ public class NextLimiter {
 
             @Override public void run() {
                 while (!Thread.currentThread().isInterrupted()) try{
-                    work();
+                    unlockTimeoutTask();
                 }catch (InterruptedException e) {
                     break;
                 }
             }
 
-            private void work() throws InterruptedException {
-                final DelayedObject<Object> task = mDelayQueue.take();
-                if(task != null) {
-                    final Object key = task.getData();
+            private void unlockTimeoutTask() throws InterruptedException {
+                final DelayedObject<Object> taskKeyWrapper = mDelayQueue.take();
+                if(taskKeyWrapper != null) {
+                    final Object key = taskKeyWrapper.getData();
+                    // unlock the key, this will allow next request of this key
                     unlock(key);
                 }
             }
@@ -51,9 +52,7 @@ public class NextLimiter {
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-        try{
-            mDaemonThread.interrupt();
-        }catch (Exception e){ /*nop*/ }
+        destroy();
     }
 
     public Thread getDaemonThread() {
@@ -99,7 +98,7 @@ public class NextLimiter {
     }
 
     private void applyJob(final Object key, final Runnable worker, final int timeout){
-        invoke(key, worker, new JobHandler(key, timeout, mDelayQueue));
+        checkInvoke(key, worker, new JobHandler(key, timeout, mDelayQueue));
     }
 
     /**
@@ -108,7 +107,7 @@ public class NextLimiter {
      * @param work 具体任务
      */
     public void lock(Object key, Runnable work){
-        invoke(key, work, JobHandler.NOP);
+        checkInvoke(key, work, JobHandler.NOP);
     }
 
     /**
@@ -117,7 +116,7 @@ public class NextLimiter {
      * @param work 具体任务
      */
     public void lock(Object key, DelayedRunnable work){
-        invoke(key, work, JobHandler.NOP);
+        checkInvoke(key, work, JobHandler.NOP);
     }
 
     /**
@@ -128,20 +127,34 @@ public class NextLimiter {
         final ReentrantLock lock = mLock;
         lock.lock();
         try{
-            mJobKeys.remove(key);
+            mLimitedKeys.remove(key);
         }finally {
             lock.unlock();
         }
     }
 
-    private void invoke(Object key, Runnable worker, JobHandler jobHandler) {
+    public void destroy(){
+        try{
+            if (!mDaemonThread.isInterrupted()){
+                mDaemonThread.interrupt();
+            }
+            mDelayQueue.clear();
+            mLimitedKeys.clear();
+        }catch (Exception e){ /*nop*/ }
+    }
+
+    /*
+        在执行时，检查指定Key是否不存在限制Key集合中。
+        如果不存在，则直接执行。如果存在，需要等到Key超时被移除后才能继续执行。
+     */
+    private void checkInvoke(Object key, Runnable worker, JobHandler jobHandler) {
         final ReentrantLock lock = mLock;
         lock.lock();
         final boolean allow;
         try{
-            allow = !mJobKeys.contains(key);
+            allow = !mLimitedKeys.contains(key);
             if(allow) {
-                mJobKeys.add(key);
+                mLimitedKeys.add(key);
             }
         }finally {
             lock.unlock();
@@ -162,17 +175,17 @@ public class NextLimiter {
 
         private final Object mKey;
         private final long mTimeout;
-        private final DelayQueue<DelayedObject<Object>> mDelayQueue;
+        private final DelayQueue<DelayedObject<Object>> mDelayQueueRef;
 
         private JobHandler(Object key, long timeout, DelayQueue<DelayedObject<Object>> delayQueue) {
             this.mKey = key;
             this.mTimeout = timeout;
-            mDelayQueue = delayQueue;
+            mDelayQueueRef = delayQueue;
         }
 
         @Override
         public void run() {
-            mDelayQueue.put(new DelayedObject<Object>(mKey, TimeUnit.NANOSECONDS.convert(mTimeout, TimeUnit.MILLISECONDS)));
+            mDelayQueueRef.put(new DelayedObject<>(mKey, TimeUnit.NANOSECONDS.convert(mTimeout, TimeUnit.MILLISECONDS)));
         }
 
     }
